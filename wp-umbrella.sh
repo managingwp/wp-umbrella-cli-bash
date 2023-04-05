@@ -16,7 +16,8 @@ function usage () {
   Commands:
     me                        - List account profile
     projects                  - List projects
-    project <projectid>       - List project details 
+    project <projectid>       - List project details
+    backups <projectid>       - List backup details for project
 "
 	echo "$USAGE"
 }
@@ -36,8 +37,8 @@ function api () {
     fi
 }
 
-# -- listProjects
-function listProjects () {
+# -- list_projects
+function list_projects () {
 	JSON=$1
 	count=1
 	OUTPUT="ID,Name,URL\n"
@@ -51,6 +52,9 @@ function listProjects () {
  		fi
 		count=$((count + 1))
 	done <<< "$FINAL_OUTPUT"
+    if [[ $RAW_JSON == "1" ]]; then
+        echo $JSON | jq
+    fi
 }
 
 function getProject () {
@@ -59,7 +63,7 @@ function getProject () {
 	echo "$JSON" | jq -r '.data[] | select( .id == 9509 )'
 }
 
-function getBackup () {
+function get_backup () {
 	# --------------
 	#  "id": 130490,
 	#  "is_scheduled": true,
@@ -105,14 +109,43 @@ pre_flight () {
 
 pre_flight
 
+# -- Arguments
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    # TODO implement debug.
+    -d|--debug)
+    DEBUG="1"
+    shift # past argument        
+    ;;
+    -r|--raw-json)
+    RAW_JSON="1"
+    shift # past argument    
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+
+# -- main loop
 if [[ -z $1 ]]; then
 	usage
 	exit 1
+#### -- me
 elif [[ $1 == "me" ]]; then
 	api me
+#### -- projects
 elif [[ $1 == "projects" ]]; then
 	JSON=$(api projects)
-	listProjects "$JSON"
+	list_projects "$JSON"
+#### -- project
 elif [[ $1 == "project" ]]; then
 	if [[ -z $2 ]]; then
 		echo "Need project ID"
@@ -121,13 +154,14 @@ elif [[ $1 == "project" ]]; then
 		JSON=$(api projects)
 		getProject "$JSON" $2
 	fi
+#### -- backups
 elif [[ $1 == "backups" ]]; then
 	if [[ -z $2 ]]; then
         echo "Need project ID"
         exit 1
     else
         JSON=$(api projects/${2}/backups)
-        getBackup "$JSON" $2
+        get_backup "$JSON" $2
     fi
 else
 	usage
