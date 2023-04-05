@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# -- variables
-if [[ -n $WP_UMBRELLA_APIKEY ]]; then
-	API_TOKEN="$WP_UMBRELLA_APIKEY"
-else
-	echo "** Error: API Token not available, please set the API Key via 'export \$WP_UMBRELLA_TOKEN'"
-	exit
-fi
+# ======================
+# -- Variables
+# ======================
 API_URL="https://api.wp-umbrella.com/v2"
 
-# -- funtions
+# ======================
+# Functions
+# ======================
 
+# -- usage
 function usage () {
 	USAGE=\
 "./wp-umbrella.sh <command>
@@ -22,6 +21,7 @@ function usage () {
 	echo "$USAGE"
 }
 
+# -- api
 function api () {
 	ENDPOINT="$1"
 	URL="${API_URL}/${ENDPOINT}"
@@ -29,13 +29,14 @@ function api () {
 	RESULT=$(echo ${API_CURL})
 	if [[ $(echo $RESULT | jq -r '.code') != "success" ]]; then
 	    echo "API Failure - "
-        echo $RESULT
+        echo $RESULT | jq
     else
     	#echo "Success"
-    	echo $RESULT
+    	echo $RESULT | jq
     fi
 }
 
+# -- listProjects
 function listProjects () {
 	JSON=$1
 	count=1
@@ -86,9 +87,23 @@ function getBackup () {
     done <<< "$FINAL_OUTPUT"
 }
 
+# -- pre_flight
+pre_flight () {
+	if [[ -n $WP_UMBRELLA_APIKEY ]]; then
+	    API_TOKEN="$WP_UMBRELLA_APIKEY"
+	else
+		usage
+	    echo "** Error: API Token not available, please set the API Key via 'export \$WP_UMBRELLA_TOKEN'"
+	    exit
+	fi
+	API_URL="https://api.wp-umbrella.com/v2"
+}
+
 ####################################
 # ----------------------------------
 ####################################
+
+pre_flight
 
 if [[ -z $1 ]]; then
 	usage
